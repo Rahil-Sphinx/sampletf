@@ -1,1 +1,6 @@
 .terraform/
+.husky/
+node_modules/
+package.json
+package-lock.json
+bootstrap/
