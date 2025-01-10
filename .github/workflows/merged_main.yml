@@ -118,4 +118,4 @@ jobs:
           echo "'s+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk_ds_${{ needs.set-environment.outputs.environment == 'dev' && 'ecr_dev' || 'prod' }}:frontend-.*+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk-ds:frontend-${{github.ref_name}}+g' arrk-helm-chart/values-${{ needs.set-environment.outputs.environment }}.yaml"
       - name: Update backend docker image in values-${{ needs.set-environment.outputs.environment }}.yaml
         run: |
-          echo "'sed -i "s+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk_ds_${{ needs.set-environment.outputs.environment == 'dev' && 'ecr_dev' || 'prod' }}:backend-.*+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk-ds:backend-${{github.ref_name}}+g' arrk-helm-chart/values-${{ needs.set-environment.outputs.environment }}.yaml"
+          echo "'s+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk_ds_${{ needs.set-environment.outputs.environment == 'dev' && 'ecr_dev' || 'prod' }}:backend-.*+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk-ds:backend-${{github.ref_name}}+g' arrk-helm-chart/values-${{ needs.set-environment.outputs.environment }}.yaml"
