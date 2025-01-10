@@ -71,7 +71,6 @@ jobs:
             echo "Validation failed: Tag '$TAG_NAME' does not follow the required naming convention (dev* or prod*).";
             exit 1; # Validation failed
           fi
-
   ECR_Push:
     needs: [set-environment]
     runs-on: ubuntu-latest
@@ -83,7 +82,7 @@ jobs:
         env:
           ECR_REPOSITORY: ${{ needs.set-environment.outputs.environment == 'dev' && 'arrk_ds_ecr_dev' || 'arrk_ds_prod' }}
           IMAGE_TAG: ${{github.ref_name}}
-          run: |
+        run: |
             echo "ECR_REPOSITORY: $ECR_REPOSITORY"
             echo "IMAGE_TAG: $IMAGE_TAG"
       - name: Push frontend docker image to ECR 
