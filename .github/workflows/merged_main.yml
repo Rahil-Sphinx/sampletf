@@ -74,69 +74,49 @@ jobs:
 
   ECR_Push:
     needs: [set-environment]
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Print Environment
         run: |
           echo "Current Environment is: ${{ needs.set-environment.outputs.environment}}"
-      - name: Setup AWS ECR Details
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{secrets.AWS_REGION}}
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
       - name: Tag frontend docker image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ needs.set-environment.outputs.environment == 'dev' && 'arrk_ds_ecr_dev' || 'arrk_ds_prod' }}
           IMAGE_TAG: ${{github.ref_name}}
-        run: docker tag arrk-frontend:latest $ECR_REGISTRY/$ECR_REPOSITORY:frontend-$IMAGE_TAG  
+          run: |
+            echo "ECR_REPOSITORY: $ECR_REPOSITORY"
+            echo "IMAGE_TAG: $IMAGE_TAG"
       - name: Push frontend docker image to ECR 
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }} .
           ECR_REPOSITORY: ${{ needs.set-environment.outputs.environment == 'dev' && 'arrk_ds_ecr_dev' || 'arrk_ds_prod' }}
           IMAGE_TAG: ${{github.ref_name}}
-        run: docker push $ECR_REGISTRY/$ECR_REPOSITORY:frontend-$IMAGE_TAG
+        run: |
+            echo "ECR_REPOSITORY: $ECR_REPOSITORY"
+            echo "IMAGE_TAG: $IMAGE_TAG"
       - name: Tag backend docker image
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ needs.set-environment.outputs.environment == 'dev' && 'arrk_ds_ecr_dev' || 'arrk_ds_prod' }}
           IMAGE_TAG: ${{github.ref_name}}
-        run: docker tag arrk-backend:latest $ECR_REGISTRY/$ECR_REPOSITORY:backend-$IMAGE_TAG
+        run: |
+            echo "ECR_REPOSITORY: $ECR_REPOSITORY"
+            echo "IMAGE_TAG: $IMAGE_TAG"
       - name: Push backend docker image to ECR
         env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ needs.set-environment.outputs.environment == 'dev' && 'arrk_ds_ecr_dev' || 'arrk_ds_prod' }}
           IMAGE_TAG: ${{github.ref_name}}
-        run: docker push $ECR_REGISTRY/$ECR_REPOSITORY:backend-$IMAGE_TAG 
-      - name: Delete all docker images
-        run: docker rmi -f $(docker images -aq)
+        run: |
+            echo "ECR_REPOSITORY: $ECR_REPOSITORY"
+            echo "IMAGE_TAG: $IMAGE_TAG"
   Update-Helm-Chart:
     needs: [set-environment]
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     steps:
       - name: Print Environment
         run: |
           echo "Environment: ${{ needs.set-environment.outputs.environment}}"
-      - name: Change ownership of directory
-        run: sudo chown -R $USER:$USER /home/ubuntu/actions-runner/_work/arrk-ds/
-      - name: checkout k8s manifest repo
-        uses: actions/checkout@v4
-        with:
-          repository: Arrk-Engineering-GmbH/arrk-ds-k8s
-          ref: main
-          token: ${{ secrets.PAT }}
       - name: Update frontend docker image in values-${{ needs.set-environment.outputs.environment }}.yaml
-        run: sed -i "s+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk_ds_${{ needs.set-environment.outputs.environment == 'dev' && 'ecr_dev' || 'prod' }}:frontend-.*+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk-ds:frontend-${{github.ref_name}}+g" arrk-helm-chart/values-${{ needs.set-environment.outputs.environment }}.yaml
-      - name: Update backend docker image in values-${{ needs.set-environment.outputs.environment }}.yaml
-        run: sed -i "s+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk_ds_${{ needs.set-environment.outputs.environment == 'dev' && 'ecr_dev' || 'prod' }}:backend-.*+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk-ds:backend-${{github.ref_name}}+g" arrk-helm-chart/values-${{ needs.set-environment.outputs.environment }}.yaml
-      - name: Commit and push updated Kubernetes manifest
         run: |
-          git config --global user.email "arrkadmin@arrk-engineering.com"
-          git config --global user.name "arrkadmin"
-          git add .
-          git commit -m "Update Docker image in Kubernetes manifest for tag ${{github.ref_name}}"
-          git push origin main
+          echo "s+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk_ds_${{ needs.set-environment.outputs.environment == 'dev' && 'ecr_dev' || 'prod' }}:frontend-.*+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk-ds:frontend-${{github.ref_name}}+g" arrk-helm-chart/values-${{ needs.set-environment.outputs.environment }}.yaml"
+      - name: Update backend docker image in values-${{ needs.set-environment.outputs.environment }}.yaml
+        run: |
+          echo "sed -i "s+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk_ds_${{ needs.set-environment.outputs.environment == 'dev' && 'ecr_dev' || 'prod' }}:backend-.*+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk-ds:backend-${{github.ref_name}}+g" arrk-helm-chart/values-${{ needs.set-environment.outputs.environment }}.yaml"
