@@ -31,7 +31,7 @@ jobs:
           # Get the tag name from the event
           TAG_NAME=${GITHUB_REF##*/}
  
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{secrets.DS_READ_ONLY}}" "https://api.github.com/repos/Rahil-Sphinx/sampletf/releases/latest/")
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{secrets.DS_READ_ONLY}}" "https://api.github.com/repos/Rahil-Sphinx/sampletf/releases/latest")
           BRANCH_NAME=$(echo $RESPONSE | jq -r '.target_commitish')
  
           # Debugging output
