@@ -1,0 +1,121 @@
+name: Deployment
+run-name: ${{ github.event_name }} in branch ${{ github.ref_name }}-${{ github.run_number }}
+
+# Please DO NOT deploy automatically! You can trigger all github actions by hand: https://github.com/Arrk-Engineering-GmbH/arrk-ds/actions. 
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+concurrency:
+  group: ${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  set-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+    steps:
+      - name: Validate Tag Naming and Branch
+        id: set-env
+        run: |
+          echo "GITHUB_REF: $GITHUB_REF"
+          ENVIRONMENT=$(echo "${GITHUB_REF##*/}" | sed -E 's/^(dev|prod).*/\1/')
+          echo "environment=$ENVIRONMENT"
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+
+          # Get the tag name from the event
+          TAG_NAME=${GITHUB_REF##*/}
+ 
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{secrets.DS_READ_ONLY}}" "https://api.github.com/repos/Rahil-Sphinx/sampletf/releases/latest/")
+          BRANCH_NAME=$(echo $RESPONSE | jq -r '.target_commitish')
+ 
+          # Debugging output
+          echo "GITHUB_REF: $GITHUB_REF"
+          echo "TAG_NAME: $TAG_NAME"
+          echo "RESPONSE: $RESPONSE"
+          echo "BRANCH_NAME: $BRANCH_NAME"
+          echo "ENVIRONMENT: $ENVIRONMENT"
+
+          # Check if the workflow was triggered by a tag
+          if [[ "$GITHUB_REF" != refs/tags/* ]]; then
+            echo "Workflow only triggers on tags, not on branches.";
+            exit 1; # Exit
+          fi
+          # Check for dev* tag
+          if [[ "$TAG_NAME" =~ ^dev.* ]]; then
+            # Allow dev tags on any branch except main
+            if [[ "$BRANCH_NAME" == "develop" ]]; then
+              echo "Validation passed for 'dev*' tag on the 'develop' branch."; 
+              exit 0; # Validation passed
+            else
+              echo "Validation failed: Tag name '$TAG_NAME' starts with 'dev', but the branch is not 'develop'.";
+              exit 1; # Validation failed
+            fi
+          # Check for prod* tag
+          elif [[ "$TAG_NAME" =~ ^prod.* ]]; then
+            # Allow prod tags only on main branch
+            if [[ "$BRANCH_NAME" == "main" ]]; then
+              echo "Validation passed for 'prod*' tag on the 'main' branch.";
+              exit 0; # Validation passed
+            else
+              echo "Validation failed: Tag name '$TAG_NAME' starts with 'prod', but the branch is not 'main'.";
+              exit 1; # Validation failed
+            fi
+          else
+            # Reject any tag that doesn't start with dev* or prod*
+            echo "Validation failed: Tag '$TAG_NAME' does not follow the required naming convention (dev* or prod*).";
+            exit 1; # Validation failed
+          fi
+  ECR_Push:
+    needs: [set-environment]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print Environment
+        run: |
+          echo "Current Environment is: ${{ needs.set-environment.outputs.environment}}"
+      - name: Tag frontend docker image
+        env:
+          ECR_REPOSITORY: ${{ needs.set-environment.outputs.environment == 'dev' && 'arrk_ds_ecr_dev' || 'arrk_ds_prod' }}
+          IMAGE_TAG: ${{github.ref_name}}
+        run: |
+            echo "ECR_REPOSITORY: $ECR_REPOSITORY"
+            echo "IMAGE_TAG: $IMAGE_TAG"
+      - name: Push frontend docker image to ECR 
+        env:
+          ECR_REPOSITORY: ${{ needs.set-environment.outputs.environment == 'dev' && 'arrk_ds_ecr_dev' || 'arrk_ds_prod' }}
+          IMAGE_TAG: ${{github.ref_name}}
+        run: |
+            echo "ECR_REPOSITORY: $ECR_REPOSITORY"
+            echo "IMAGE_TAG: $IMAGE_TAG"
+      - name: Tag backend docker image
+        env:
+          ECR_REPOSITORY: ${{ needs.set-environment.outputs.environment == 'dev' && 'arrk_ds_ecr_dev' || 'arrk_ds_prod' }}
+          IMAGE_TAG: ${{github.ref_name}}
+        run: |
+            echo "ECR_REPOSITORY: $ECR_REPOSITORY"
+            echo "IMAGE_TAG: $IMAGE_TAG"
+      - name: Push backend docker image to ECR
+        env:
+          ECR_REPOSITORY: ${{ needs.set-environment.outputs.environment == 'dev' && 'arrk_ds_ecr_dev' || 'arrk_ds_prod' }}
+          IMAGE_TAG: ${{github.ref_name}}
+        run: |
+            echo "ECR_REPOSITORY: $ECR_REPOSITORY"
+            echo "IMAGE_TAG: $IMAGE_TAG"
+  Update-Helm-Chart:
+    needs: [set-environment]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print Environment
+        run: |
+          echo "Environment: ${{ needs.set-environment.outputs.environment}}"
+      - name: Update frontend docker image in values-${{ needs.set-environment.outputs.environment }}.yaml
+        run: |
+          echo "'s+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk_ds_${{ needs.set-environment.outputs.environment == 'dev' && 'ecr_dev' || 'prod' }}:frontend-.*+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk-ds:frontend-${{github.ref_name}}+g' arrk-helm-chart/values-${{ needs.set-environment.outputs.environment }}.yaml"
+      - name: Update backend docker image in values-${{ needs.set-environment.outputs.environment }}.yaml
+        run: |
+          echo "'s+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk_ds_${{ needs.set-environment.outputs.environment == 'dev' && 'ecr_dev' || 'prod' }}:backend-.*+208409385559.dkr.ecr.eu-central-1.amazonaws.com/arrk-ds:backend-${{github.ref_name}}+g' arrk-helm-chart/values-${{ needs.set-environment.outputs.environment }}.yaml"
