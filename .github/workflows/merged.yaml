@@ -1,0 +1,40 @@
+name: Test Environment Extraction and Passing Outputs
+ 
+on:
+  workflow_dispatch:
+ 
+jobs:
+  extract-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.set-env.outputs.environment }}
+    steps:
+      - name: Extract environment from GITHUB_REF
+        id: set-env
+        run: |
+          echo "GITHUB_REF: $GITHUB_REF"
+          ENVIRONMENT=$(echo "${GITHUB_REF##*/}" | sed -E 's/^(dev|prod).*/\1/')
+          echo "Extracted environment: $ENVIRONMENT"
+          if [[ "$ENVIRONMENT" != "dev" && "$ENVIRONMENT" != "prod" ]]; then
+            echo "Environment extraction failed or invalid environment!"
+            exit 1
+          fi
+          echo "environment=$ENVIRONMENT" >> $GITHUB_OUTPUT
+        # Store the extracted environment as an output variable
+ 
+  use-environment:
+    needs: extract-environment
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use the extracted environment
+        run: |
+          echo "Using the environment from the previous job..."
+          echo "Extracted environment: ${{ needs.extract-environment.outputs.environment }}"
+          if [[ "${{ needs.extract-environment.outputs.environment }}" == "dev" ]]; then
+            echo "Running logic for the DEV environment."
+          elif [[ "${{ needs.extract-environment.outputs.environment }}" == "prod" ]]; then
+            echo "Running logic for the PROD environment."
+          else
+            echo "Invalid environment detected!"
+            exit 1
+          fi
