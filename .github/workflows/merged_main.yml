@@ -31,7 +31,7 @@ jobs:
           # Get the tag name from the event
           TAG_NAME=${GITHUB_REF##*/}
  
-          RESPONSE=$(curl -s -H "Authorization: Bearer ${{ secrets.DS_READ_ONLY }}" "https://api.github.com/repos/Rahil-Sphinx/sampletf/releases/tags/${TAG_NAME}")
+          RESPONSE=$(curl -s -H "Authorization: Bearer ${{secrets.DS_READ_ONLY}}" "https://api.github.com/repos/Rahil-Sphinx/sampletf/releases/tags/${TAG_NAME}")
           BRANCH_NAME=$(echo $RESPONSE | jq -r '.target_commitish')
  
           # Debugging output
@@ -73,7 +73,7 @@ jobs:
           fi
 
   owasp-scan:
-    runs-on: ubuntu-latest    
+    runs-on: ubuntu-latest   
     needs: set-environment
     steps:
       - name: Print Environment
